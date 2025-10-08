@@ -1,0 +1,30 @@
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# macOS system files
+.DS_Store
+
+# Python compiled files
+*.pyc
+__pycache__/
+
+# Editor/IDE specific files (examples)
+.vscode/
+.idea/
+
+# Environment files
+.env
+venv/
+env/
+
+# Data files (if not intended for version control)
+*.csv
+*.txt
+*.parquet
+*.hdf5
+
+# Output files that can be regenerated
+# (e.g., HTML exports, temporary plots)
+*.html
+*.pdf
+*.png
