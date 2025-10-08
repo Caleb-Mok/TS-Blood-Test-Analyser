@@ -1,0 +1,19 @@
+{
+    "Haemoglobin": {"unit": "g/L", "min": 120, "max": 150},
+    "RBC": {"unit": "x10^12/L", "min": 4.00, "max": 5.40},
+    "PCV": {"unit": "L/L", "min": 0.36, "max": 0.46},
+    "MCV": {"unit": "fL", "min": 80, "max": 100},
+    "MCH": {"unit": "pg", "min": 27, "max": 32},
+    "MCHC": {"unit": "g/L", "min": 300, "max": 350},
+    "RDW": {"unit": "%", "min": 11.0, "max": 15.0},
+    "White Cell Count": {"unit": "x10^9/L", "min": 4.0, "max": 10.0},
+    "Neutrophils": {"unit": "x10^9/L", "min": 2.0, "max": 7.0},
+    "Lymphocytes": {"unit": "x10^9/L", "min": 1.0, "max": 4.0},
+    "Monocytes": {"unit": "x10^9/L", "min": 0.2, "max": 1.0},
+    "Eosinophils": {"unit": "x10^9/L", "min": 0.02, "max": 0.5},
+    "Basophils": {"unit": "x10^9/L", "min": 0.00, "max": 0.10},
+    "Platelets": {"unit": "x10^9/L", "min": 150, "max": 410},
+    "MPV": {"unit": "fL", "min": 9.00, "max": 12.34},
+    "PDW": {"unit": "", "min": 9.26, "max": 16.24},
+    "ESR": {"unit": "mm/h", "min": 0, "max": 21}
+  }
