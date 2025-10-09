@@ -1,19 +1,22 @@
 import sys
-# import numpy
+import numpy
+import json
 
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QLineEdit, QSizePolicy)
+    QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QLineEdit, QSizePolicy, QFrame, QScrollArea)
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 
 class BloodAnalyzerApp(QMainWindow):
     
-    def __init__(self):
+    def __init__(self, json_file):
         super().__init__()
         self.setWindowTitle("Blood Test Analyser")
+        self.resize(1000, 800)
         
+        # central widget and main layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        # layout
         main_layout = QVBoxLayout(central_widget)
 
         # Menu Buttons
@@ -22,46 +25,120 @@ class BloodAnalyzerApp(QMainWindow):
         submit_button = QPushButton("Submit")
         export_button = QPushButton("Export")
 
-        menu_layout = QHBoxLayout()
-        menu_layout.addWidget(open_button)
-        menu_layout.addWidget(clear_button)
-        menu_layout.addWidget(submit_button)
-        menu_layout.addWidget(export_button)
+        menu_layout = QHBoxLayout() 
+        button_font = QFont()
+        button_font.setPointSize(11)
+
+        for btn in [open_button, clear_button, submit_button, export_button]:
+            btn.setFixedHeight(40)
+            btn.setFont(button_font)
+            menu_layout.addWidget(btn)
+        
         main_layout.addLayout(menu_layout)
 
+        # Horizontal line
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        main_layout.addWidget(line)
+
+        # Scroll Area Setup
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setMinimumSize(1000,500)
+        main_layout.addWidget(scroll_area)
+
+        # Scrollable Inner Widget
+        scroll_content = QWidget()
+        scroll_area.setWidget(scroll_content)
+
         # Table Grid
-        grid = QGridLayout()
-        grid.setHorizontalSpacing(20)
+        grid = QGridLayout(scroll_content)
+        grid.setHorizontalSpacing(25)
         grid.setVerticalSpacing(8)
 
         # set how wide each column becomes
-        grid.setColumnStretch(0, 1)   # Parameter (small)
-        grid.setColumnStretch(1, 2)   # Result (larger)
-        grid.setColumnStretch(2, 1)   # Range (small)
-        grid.setColumnStretch(3, 1)   # Status (small)
+        grid.setColumnStretch(0, 3)   # Test
+        grid.setColumnStretch(1, 1)   # Unit
+        grid.setColumnStretch(2, 2)   # Result
+        grid.setColumnStretch(3, 2)   # Range 
+        grid.setColumnStretch(4, 1)   # Status
 
-       
-        grid.addWidget(QLabel("<b>Parameter</b>"), 0, 0, Qt.AlignTop | Qt.AlignLeft)
-        grid.addWidget(QLabel("<b>Result</b>"), 0, 1, Qt.AlignTop | Qt.AlignLeft)
-        grid.addWidget(QLabel("<b>Range</b>"), 0, 2, Qt.AlignTop | Qt.AlignLeft)
-        grid.addWidget(QLabel("<b>Status</b>"), 0, 3, Qt.AlignTop | Qt.AlignLeft)
+        headers = ["<b>Test</b>", "<b>Units</b>", "<b>Result</b>", "<b>Range</b>", "<b>Status</b>"]
+        header_font = QFont()
+        header_font.setBold(True)
+        header_font.setPointSize(11)
 
-        # Sample demo row
-        grid.addWidget(QLabel("Haemoglobin"), 1, 0)
-        grid.addWidget(QLineEdit(), 1, 1)
-        grid.addWidget(QLabel("120–150 g/L"), 1, 2)
-        grid.addWidget(QLabel("Healthy"), 1, 3)
+        for col, header in enumerate(headers):
+            header_label = QLabel(header)
+            header_label.setFont(header_font)
+            grid.addWidget(header_label, 0, col, Qt.AlignTop | Qt.AlignLeft)
 
-        main_layout.addLayout(grid)
+        self.load_data(grid, json_file)
+
+        main_layout.addWidget(scroll_area)
+
+        # Horizontal line
+        line2 = QFrame()
+        line2.setFrameShape(QFrame.HLine)
+        line2.setFrameShadow(QFrame.Sunken)
+        line2.setStyleSheet("color: #555; margin: 8px 0;")
+        main_layout.addWidget(line2)
+
+        main_layout.addWidget(QLabel("<b>Summary</b>"), Qt.AlignTop | Qt.AlignLeft)
         main_layout.addStretch() # Move everything to top
+    
+    def load_data(self, grid, json_file):
+        """Automatically populate the grid layout with test data"""
+        with open(json_file, "r") as f:
+            data = json.load(f)
+        
+        row = 1 # start after the header
+        section_font = QFont()
+        section_font.setBold(True)
+        section_font.setPointSize(11)
+
+        # category title
+        for category in data["categories"]:
+            category_label = QLabel(category["name"])
+            category_label.setFont(section_font)
+            category_label.setStyleSheet("color: #004080")
+
+            grid.addWidget(category_label, row, 0, 1, 4)
+            row += 1
+
+            # tests
+
+            for test in category["tests"]:
+                param_label = QLabel(test["name"])
+                # param_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+                unit_label = QLabel(test["units"])
+
+                input_field = QLineEdit()
+                input_field.setPlaceholderText("Enter result...")
+                input_field.setFixedWidth(120)
+
+                healthy_label = QLabel(str(test["healthy_value"]))
+                # healthy_label.setStyleSheet("color: gray;")
+
+                status_label = QLabel("-")  # placeholder for later green/yellow/red
+                status_label.setAlignment(Qt.AlignCenter)
+
+                grid.addWidget(param_label, row, 0)
+                grid.addWidget(unit_label, row, 1)
+                grid.addWidget(input_field, row, 2)
+                grid.addWidget(healthy_label, row, 3)
+                grid.addWidget(status_label, row, 4)
+                row += 1
+
 
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    window = BloodAnalyzerApp()
-    window.resize(700, 700)
+    window = BloodAnalyzerApp("data/healthy_ranges.json")
     window.show()
 
     app.exec()
