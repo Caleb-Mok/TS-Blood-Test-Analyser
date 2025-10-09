@@ -3,9 +3,13 @@ import numpy
 import json
 
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QLineEdit, QSizePolicy, QFrame, QScrollArea)
+    QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QLineEdit, QSizePolicy, QFrame, QScrollArea, QTextEdit)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
+
+from modules.analyzer import Analyzer
+from modules.parser import PDFParser
+
 
 class BloodAnalyzerApp(QMainWindow):
     
@@ -13,7 +17,15 @@ class BloodAnalyzerApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("Blood Test Analyser")
         self.resize(1000, 800)
+        self.analyzer = Analyzer()
+        self.parser = PDFParser()
+        self.json_file = json_file
+
+        self.param_inputs = {}
+        self.summary_box = QTextEdit()
+        self.setup_ui()
         
+    def setup_ui (self):
         # central widget and main layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -35,12 +47,7 @@ class BloodAnalyzerApp(QMainWindow):
             menu_layout.addWidget(btn)
         
         main_layout.addLayout(menu_layout)
-
-        # Horizontal line
-        line = QFrame()
-        line.setFrameShape(QFrame.HLine)
-        line.setFrameShadow(QFrame.Sunken)
-        main_layout.addWidget(line)
+        main_layout.addWidget(self.separator())
 
         # Scroll Area Setup
         scroll_area = QScrollArea()
@@ -74,19 +81,25 @@ class BloodAnalyzerApp(QMainWindow):
             header_label.setFont(header_font)
             grid.addWidget(header_label, 0, col, Qt.AlignTop | Qt.AlignLeft)
 
-        self.load_data(grid, json_file)
+        self.load_data(grid, self.json_file)
 
         main_layout.addWidget(scroll_area)
+        main_layout.addWidget(self.separator())
 
-        # Horizontal line
-        line2 = QFrame()
-        line2.setFrameShape(QFrame.HLine)
-        line2.setFrameShadow(QFrame.Sunken)
-        line2.setStyleSheet("color: #555; margin: 8px 0;")
-        main_layout.addWidget(line2)
+        main_layout.addWidget(QLabel("<b>Summary/Notes</b>"), Qt.AlignTop | Qt.AlignLeft)
+        main_layout.addWidget(self.summary_box)
+        main_layout.addStretch() # Move everything to top (top justify)
 
-        main_layout.addWidget(QLabel("<b>Summary</b>"), Qt.AlignTop | Qt.AlignLeft)
-        main_layout.addStretch() # Move everything to top
+        # connect all the signals
+        clear_button.clicked.connect(self.clear_all)
+        submit_button.clicked.connect(self.submit_data)
+
+    def separator(self):
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        return line
+
     
     def load_data(self, grid, json_file):
         """Automatically populate the grid layout with test data"""
@@ -118,6 +131,7 @@ class BloodAnalyzerApp(QMainWindow):
                 input_field = QLineEdit()
                 input_field.setPlaceholderText("Enter result...")
                 input_field.setFixedWidth(120)
+                self.param_inputs[test["name"]] = input_field
 
                 healthy_label = QLabel(str(test["healthy_value"]))
                 # healthy_label.setStyleSheet("color: gray;")
@@ -131,6 +145,25 @@ class BloodAnalyzerApp(QMainWindow):
                 grid.addWidget(healthy_label, row, 3)
                 grid.addWidget(status_label, row, 4)
                 row += 1
+
+    def clear_all(self):
+        """Clears all QLineEdit fields and summary box."""
+        for field in self.param_inputs.values():
+            field.clear()
+        self.summary_box.clear()
+
+    def submit_data(self):
+        """Submits all the value in the line fields to the analyzer and runs the analyzer"""
+        raw_data = {param: field.text().strip() for param, field in self.param_inputs.items()}
+
+        result = self.analyzer.analyze(raw_data)
+
+        self.display_summary(result)
+    
+    def display_summary(self, result):
+        """Display the analyser's result in the summary box"""
+        self.summary_box.setPlainText("This is your summary: .....")
+
 
 
 
