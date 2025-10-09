@@ -39,6 +39,7 @@ class BloodAnalyzerApp(QMainWindow):
 
         menu_layout = QHBoxLayout() 
         button_font = QFont()
+        button_font.setBold(True)
         button_font.setPointSize(11)
 
         for btn in [open_button, clear_button, submit_button, export_button]:
@@ -86,7 +87,9 @@ class BloodAnalyzerApp(QMainWindow):
         main_layout.addWidget(scroll_area)
         main_layout.addWidget(self.separator())
 
-        main_layout.addWidget(QLabel("<b>Summary/Notes</b>"), Qt.AlignTop | Qt.AlignLeft)
+        summary_label = QLabel("<b>Summary/Notes</b>")
+        summary_label.setFont(header_font)
+        main_layout.addWidget(summary_label, Qt.AlignTop | Qt.AlignLeft)
         main_layout.addWidget(self.summary_box)
         main_layout.addStretch() # Move everything to top (top justify)
 
