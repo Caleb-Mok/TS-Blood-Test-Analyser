@@ -9,6 +9,7 @@ from PySide6.QtGui import QFont
 
 from modules.analyzer import Analyzer
 from modules.parser import PDFParser
+from modules.exporter import PDFExporter
 
 
 class BloodAnalyzerApp(QMainWindow):
@@ -19,9 +20,12 @@ class BloodAnalyzerApp(QMainWindow):
         self.resize(1000, 800)
         self.analyzer = Analyzer()
         self.parser = PDFParser()
+        self.exporter = PDFExporter()
         self.json_file = json_file
 
         self.param_inputs = {}
+        self.param_autos = {}
+        self.status_outputs = {}
         self.summary_box = QTextEdit()
         self.setup_ui()
         
@@ -96,6 +100,8 @@ class BloodAnalyzerApp(QMainWindow):
         # connect all the signals
         clear_button.clicked.connect(self.clear_all)
         submit_button.clicked.connect(self.submit_data)
+        export_button.clicked.connect(self.export_data)
+        open_button.clicked.connect(self.open_n_parse_data)
 
     def separator(self):
         line = QFrame()
@@ -141,6 +147,7 @@ class BloodAnalyzerApp(QMainWindow):
 
                 status_label = QLabel("-")  # placeholder for later green/yellow/red
                 status_label.setAlignment(Qt.AlignCenter)
+                # self.status_outputs[test["name"]] = status_label
 
                 grid.addWidget(param_label, row, 0)
                 grid.addWidget(unit_label, row, 1)
@@ -159,13 +166,27 @@ class BloodAnalyzerApp(QMainWindow):
         """Submits all the value in the line fields to the analyzer and runs the analyzer"""
         raw_data = {param: field.text().strip() for param, field in self.param_inputs.items()}
 
-        result = self.analyzer.analyze(raw_data)
+        self.status_outputs, summary = self.analyzer.analyze(raw_data)
+        self.summary_box.setPlainText(summary)
 
-        self.display_summary(result)
-    
-    def display_summary(self, result):
-        """Display the analyser's result in the summary box"""
-        self.summary_box.setPlainText("This is your summary: .....")
+    def export_data(self):
+        """Starts the export process"""
+        print("Exporting data")
+        self.exporter.export(self.status_outputs, self.summary_box.toPlainText())
+
+    def open_n_parse_data(self):
+        """Calls parser.py and start parsing the pdf/img from open file
+        might want to pop a window popup to choose which files
+        """
+        print("Opening file")
+        filepath = "get filepath from popup"
+
+        self.param_autos = self.parser.parse(filepath)
+
+        # then do comparisons, if param_autos have the same key as params_inputs then update the params_inputs value with the param_autos value.
+        
+
+
 
 
 

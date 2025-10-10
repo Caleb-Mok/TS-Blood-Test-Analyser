@@ -1,7 +1,9 @@
 class Analyzer:
     def analyze(self, data):
         # data is a dict of {param_name: value}
-        return {"status": "ok", "details": {}}
+
+        # return dict of {param_name: status}, and string (summary)
+        return {}, "This is your summary: ....."
 
 
     def get_status_color(value, min_val, max_val, tolerance=0.10):
