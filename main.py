@@ -25,7 +25,8 @@ class BloodAnalyzerApp(QMainWindow):
 
         self.param_inputs = {}
         self.param_autos = {}
-        self.status_outputs = {}
+        self.status_labels = {}
+        self.analysed = {}
         self.summary_box = QTextEdit()
         self.setup_ui()
         
@@ -76,7 +77,7 @@ class BloodAnalyzerApp(QMainWindow):
         grid.setColumnStretch(3, 2)   # Range 
         grid.setColumnStretch(4, 1)   # Status
 
-        headers = ["<b>Test</b>", "<b>Units</b>", "<b>Result</b>", "<b>Range</b>", "<b>Status</b>"]
+        headers = ["<b>Test</b>", "<b>Units</b>", "<b>Result</b>", "<b>Healthy Range</b>", "<b>Status</b>"]
         header_font = QFont()
         header_font.setBold(True)
         header_font.setPointSize(11)
@@ -141,13 +142,16 @@ class BloodAnalyzerApp(QMainWindow):
                 input_field.setPlaceholderText("Enter result...")
                 input_field.setFixedWidth(120)
                 self.param_inputs[test["name"]] = input_field
+                
 
-                healthy_label = QLabel(str(test["healthy_value"]))
+                # healthy_label = QLabel(str(test["healthy_value"]))
+                healthy_label = QLabel(str(test["min"])+"-"+str(test["max"]))
                 # healthy_label.setStyleSheet("color: gray;")
 
                 status_label = QLabel("-")  # placeholder for later green/yellow/red
                 status_label.setAlignment(Qt.AlignCenter)
-                # self.status_outputs[test["name"]] = status_label
+                status_label.setStyleSheet("background-color: gray; color: black; border-radius: 4px; padding: 2px;")
+                self.status_labels[test["name"]] = status_label
 
                 grid.addWidget(param_label, row, 0)
                 grid.addWidget(unit_label, row, 1)
@@ -162,17 +166,50 @@ class BloodAnalyzerApp(QMainWindow):
             field.clear()
         self.summary_box.clear()
 
+        for label in self.status_labels.values():
+            label.setText("-")
+            label.setStyleSheet("background-color: lightgray; color: black; border-radius: 4px; padding: 2px;")
+
+        self.status_outputs = {}
+
     def submit_data(self):
         """Submits all the value in the line fields to the analyzer and runs the analyzer"""
         raw_data = {param: field.text().strip() for param, field in self.param_inputs.items()}
 
-        self.status_outputs, summary = self.analyzer.analyze(raw_data)
+        self.analysed, summary = self.analyzer.analyze(raw_data)
         self.summary_box.setPlainText(summary)
+
+        for test_name, info in self.analysed.items():
+            status = info["status"]
+            label = self.status_labels.get(test_name)
+            if not label:
+                continue
+
+            # Set text and background color
+            if status == "green":
+                label.setText("Normal")
+                label.setStyleSheet("background-color: lightgreen; color: black; border-radius: 4px; padding: 2px;")
+            elif status == "yellow":
+                label.setText("Slightly High/Low")
+                label.setStyleSheet("background-color: yellow; color: black; border-radius: 4px; padding: 2px;")
+            elif status == "red":
+                label.setText("Abnormal")
+                label.setStyleSheet("background-color: red; color: white; border-radius: 4px; padding: 2px;")
+            elif status == "empty":
+                label.setText("Not Tested")
+                label.setStyleSheet("background-color: lightgray; color: black; border-radius: 4px; padding: 2px;")
+            elif status == "uncheckable":
+                label.setText("Check Manually")
+                label.setStyleSheet("background-color: orange; color: black; border-radius: 4px; padding: 2px;")
+            else:
+                label.setText("Unknown")
+                label.setStyleSheet("background-color: gray; color: white; border-radius: 4px; padding: 2px;")
+
 
     def export_data(self):
         """Starts the export process"""
         print("Exporting data")
-        self.exporter.export(self.status_outputs, self.summary_box.toPlainText())
+        self.exporter.export(self.analysed, self.summary_box.toPlainText())
 
     def open_n_parse_data(self):
         """Calls parser.py and start parsing the pdf/img from open file
@@ -184,8 +221,6 @@ class BloodAnalyzerApp(QMainWindow):
         self.param_autos = self.parser.parse(filepath)
 
         # then do comparisons, if param_autos have the same key as params_inputs then update the params_inputs value with the param_autos value.
-        
-
 
 
 
