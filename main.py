@@ -77,7 +77,7 @@ class BloodAnalyzerApp(QMainWindow):
         grid.setColumnStretch(3, 2)   # Range 
         grid.setColumnStretch(4, 1)   # Status
 
-        headers = ["<b>Test</b>", "<b>Units</b>", "<b>Result</b>", "<b>Healthy Range</b>", "<b>Status</b>"]
+        headers = ["<b>Test</b>", "<b>Units</b>", "<b>Result</b>", "<b>Reference Range</b>", "<b>Status</b>"]
         header_font = QFont()
         header_font.setBold(True)
         header_font.setPointSize(11)
@@ -143,9 +143,26 @@ class BloodAnalyzerApp(QMainWindow):
                 input_field.setFixedWidth(120)
                 self.param_inputs[test["name"]] = input_field
                 
+                def format_reference(test):
+                    min_val = str(test.get("min", "")).strip()
+                    max_val = str(test.get("max", "")).strip()
+                    healthy_val = str(test.get("healthy_value", "")).strip()
 
+                    if min_val and max_val:
+                        return f"{min_val}-{max_val}"
+                    elif min_val:
+                        return f">{min_val}"
+                    elif max_val:
+                        return f"<{max_val}"
+                    elif healthy_val:
+                        return healthy_val
+                    else:
+                        return ""
+                    
+                ref_text = format_reference(test)
+                healthy_label = QLabel(ref_text)
                 # healthy_label = QLabel(str(test["healthy_value"]))
-                healthy_label = QLabel(str(test["min"])+"-"+str(test["max"]))
+                # healthy_label = QLabel(str(test["min"])+"-"+str(test["max"]))
                 # healthy_label.setStyleSheet("color: gray;")
 
                 status_label = QLabel("-")  # placeholder for later green/yellow/red
@@ -202,8 +219,10 @@ class BloodAnalyzerApp(QMainWindow):
                 label.setText("Check Manually")
                 label.setStyleSheet("background-color: orange; color: black; border-radius: 4px; padding: 2px;")
             else:
-                label.setText("Unknown")
-                label.setStyleSheet("background-color: gray; color: white; border-radius: 4px; padding: 2px;")
+                # label.setText("Unknown")
+                # label.setStyleSheet("background-color: gray; color: white; border-radius: 4px; padding: 2px;")
+                label.setText("Check Manually")
+                label.setStyleSheet("background-color: orange; color: black; border-radius: 4px; padding: 2px;")
 
 
     def export_data(self):

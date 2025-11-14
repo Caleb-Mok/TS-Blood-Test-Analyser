@@ -15,7 +15,7 @@
           { "name": "Triglycerides", "units":"mmol/L", "healthy_value": 1.13, "min": "", "max": "1.7" },
           { "name": "HDL-Cholesterol (Male)", "units":"mmol/L", "healthy_value": "1.55", "min": "1.29", "max": "1.55" },
           { "name": "HDL-Cholesterol (Female)", "units":"mmol/L", "healthy_value": "1.29", "min": "1.29", "max": "1.55" },
-          { "name": "LDL-Cholesterol", "units":"mmol/L", "healthy_value": 2.07, "min": "", "max": "<3.37" },
+          { "name": "LDL-Cholesterol", "units":"mmol/L", "healthy_value": 2.07, "min": "", "max": "3.37" },
           { "name": "VLDL-Cholesterol", "units":"mmol/L", "healthy_value": "<0.39", "min": "", "max": "" },
           { "name": "Total/HDL Ratio", "units":"", "healthy_value": "<4", "min": "", "max": "" }
         ]
@@ -77,11 +77,11 @@
       {
         "name": "Tumour Markers PROFILE",
         "tests": [
-          { "name": "Alpha-Feto protein (AFP)", "units":"ug/L", "healthy_value": "<7", "min": "", "max": "<11" },
-          { "name": "CEA", "units":"ug/L", "healthy_value": "<4.7", "min": "", "max": "<5.1" },
+          { "name": "Alpha-Feto protein (AFP)", "units":"ug/L", "healthy_value": "<7", "min": "", "max": "11" },
+          { "name": "CEA", "units":"ug/L", "healthy_value": "<4.7", "min": "", "max": "5.1" },
           { "name": "CA15.3", "units":"U/ml", "healthy_value": "<31.3", "min": "", "max": "39.1" },
-          { "name": "CA19.9", "units":"U/ml", "healthy_value": "<39", "min": "", "max": "<32" },
-          { "name": "CA125", "units":"U/ml", "healthy_value": "<35", "min": "", "max": "<36" },
+          { "name": "CA19.9", "units":"U/ml", "healthy_value": "<39", "min": "", "max": "32" },
+          { "name": "CA125", "units":"U/ml", "healthy_value": "<35", "min": "", "max": "36" },
           { "name": "Total PSA", "units":"", "healthy_value": "<4.0", "min": "", "max": "" }
         ]
       },
@@ -101,7 +101,7 @@
           { "name": "MCV", "units":"fL", "healthy_value": 91, "min": 82, "max": 100 },
           { "name": "MCH", "units":"pg", "healthy_value": 30.5, "min": 27, "max": 34 },
           { "name": "MCHC", "units":"g/L", "healthy_value": 335, "min": 316, "max": 354 },
-          { "name": "ESR", "units":"mm/h", "healthy_value": "Female <20", "min": "", "max": "<21" }
+          { "name": "ESR", "units":"mm/h", "healthy_value": "Female <20", "min": "", "max": "21" }
         ]
       },
       {
