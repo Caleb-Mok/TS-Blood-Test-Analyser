@@ -11,6 +11,9 @@ from modules.analyzer import Analyzer
 from modules.parser import PDFParser
 from modules.exporter import PDFExporter
 
+from PySide6.QtWidgets import QFileDialog
+from modules.parser import PDFSelectionDialog
+
 
 class BloodAnalyzerApp(QMainWindow):
     
@@ -235,11 +238,47 @@ class BloodAnalyzerApp(QMainWindow):
         might want to pop a window popup to choose which files
         """
         print("Opening file")
-        filepath = "get filepath from popup"
+        # filepath = "get filepath from popup"
 
-        self.param_autos = self.parser.parse(filepath)
+        # self.param_autos = self.parser.parse(filepath)
 
         # then do comparisons, if param_autos have the same key as params_inputs then update the params_inputs value with the param_autos value.
+
+        """Opens a file dialog, launches PDF region selector modal,
+       extracts values, and updates the UI automatically.
+        """
+
+        # 1. Ask user for a PDF file
+        filepath, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Blood Test PDF",
+            "",
+            "PDF Files (*.pdf)"
+        )
+
+        if not filepath:
+            return  # User cancelled
+
+        # 2. Launch modal window for region selection
+        dialog = PDFSelectionDialog(filepath, parent=self)
+        if dialog.exec() != dialog.accepted:
+            return  # User cancelled
+
+        # 3. Retrieve parsed values from modal
+        results = dialog.get_results()
+        parsed_values = results.get("parsed_values", {})
+
+        # 4. Merge into persistent dictionary (never reset unless Clear All)
+        for key, val in parsed_values.items():
+            self.param_autos[key] = val
+
+        # 5. Update UI fields where test names match
+        for test_name, field in self.param_inputs.items():
+            if test_name in self.param_autos:
+                field.setText(self.param_autos[test_name])
+
+        # Optional: force analyser to re-check statuses on update
+        # self.submit_data()
 
 
 
