@@ -56,6 +56,7 @@ class BloodAnalyzerApp(QMainWindow):
         self.status_labels = {}
         self.analysed = {}
         self.current_pdf_path = None
+        self.unit_inputs = {}
 
         # UI Elements
         self.summary_box = QTextEdit()
@@ -108,10 +109,11 @@ class BloodAnalyzerApp(QMainWindow):
         grid.setColumnStretch(0, 3)   # Test
         grid.setColumnStretch(1, 1)   # Unit
         grid.setColumnStretch(2, 2)   # Result
+        grid.setColumnStretch(3, 1)   # Detected Unit
         grid.setColumnStretch(3, 2)   # Range 
         grid.setColumnStretch(4, 1)   # Status
 
-        headers = ["<b>Test</b>", "<b>Units</b>", "<b>Result</b>", "<b>Reference Range</b>", "<b>Status</b>"]
+        headers = ["<b>Test</b>", "<b>Units</b>", "<b>Result</b>", "<b>Detected Unit</b>","<b>Ref. Range</b>", "<b>Status</b>"]
         header_font = QFont()
         header_font.setBold(True)
         header_font.setPointSize(11)
@@ -173,11 +175,18 @@ class BloodAnalyzerApp(QMainWindow):
                 # param_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
                 unit_label = QLabel(test["units"])
-
+                
+                # Result input
                 input_field = QLineEdit()
                 input_field.setPlaceholderText("Enter result...")
                 input_field.setFixedWidth(120)
                 self.param_inputs[test["name"]] = input_field
+
+                # Detected Unit Input 
+                unit_input = QLineEdit()
+                unit_input.setFixedWidth(80)
+                unit_input.setPlaceholderText("AI unit...")
+                self.unit_inputs[test["name"]] = unit_input # Store in new dict
                 
                 def format_reference(test):
                     min_val = str(test.get("min", "")).strip()
@@ -209,8 +218,9 @@ class BloodAnalyzerApp(QMainWindow):
                 grid.addWidget(param_label, row, 0)
                 grid.addWidget(unit_label, row, 1)
                 grid.addWidget(input_field, row, 2)
-                grid.addWidget(healthy_label, row, 3)
-                grid.addWidget(status_label, row, 4)
+                grid.addWidget(unit_input, row, 3)
+                grid.addWidget(healthy_label, row, 4)
+                grid.addWidget(status_label, row, 5)
                 row += 1
     
     # --- ACTION HANDLERS ---
@@ -287,7 +297,7 @@ class BloodAnalyzerApp(QMainWindow):
 
         # Success
         self.populate_ui_from_data(parsed_data)
-        QMessageBox.information(self, "Success", "Data extracted and fields populated!")
+        # QMessageBox.information(self, "Success", "Data extracted and fields populated!")
         self.extract_btn.setStyleSheet("")
         pprint.pp(parsed_data)
 
@@ -305,17 +315,30 @@ class BloodAnalyzerApp(QMainWindow):
         if not parsed_data:
             return
         
-        # 1. Delegate the complex matching logic to the Normalizer
-        clean_data = self.normalizer.normalize(parsed_data)
-            
+        raw_tests = parsed_data.get("tests", {})
+        
         count = 0
-        # 2. Populate UI (No logic needed here, just simple assignment)
-        for test_name, value in clean_data.items():
-            if test_name in self.param_inputs:
-                self.param_inputs[test_name].setText(value)
-                # Update the persistent auto-fill dict too
-                self.param_autos[test_name] = value 
-                count += 1
+        
+        for llm_name, data in raw_tests.items():
+            # 1. Find the canonical name (Your JSON key) using Normalizer logic
+            # Note: Ensure _find_best_match exists in your Normalizer class
+            canonical_name = self.normalizer._find_best_match(llm_name)
+            
+            if canonical_name:
+                # 2. Extract Value and Unit
+                val = str(data.get("value", ""))
+                unit = str(data.get("unit", ""))
+
+                # 3. Populate Result Field
+                if canonical_name in self.param_inputs:
+                    self.param_inputs[canonical_name].setText(val)
+                    # Update persistence
+                    self.param_autos[canonical_name] = val
+                    count += 1
+
+                # 4. Populate Detected Unit Field
+                if canonical_name in self.unit_inputs:
+                    self.unit_inputs[canonical_name].setText(unit)
         
         QMessageBox.information(self, "Success", f"Populated {count} fields.")
 
@@ -344,28 +367,9 @@ class BloodAnalyzerApp(QMainWindow):
     def submit_data(self):
         """Submits all the value in the line fields to the analyzer and runs the analyzer"""
         raw_data = {param: field.text().strip() for param, field in self.param_inputs.items()}
+        ui_units = {p: f.text().strip() for p, f in self.unit_inputs.items()}
 
-        # 2. Prepare AI Extracted Units for validation
-        # We need to map the AI's units to the canonical test names using the Normalizer
-        ai_units_map = {}
-        if self.parser.auto_params:
-            raw_ai_tests = self.parser.auto_params.get("tests", {})
-            
-            # We iterate through the raw AI data
-            for llm_name, test_data in raw_ai_tests.items():
-                unit = test_data.get("unit")
-                if unit:
-                    # Find which Canonical Name this corresponds to
-                    # (We use the internal helper from normalizer if available, or just re-normalize)
-                    # Since we don't expose _find_best_match publicly, we can rely on 
-                    # self.param_autos logic if we tracked it, OR we just trust the normalize() output if we stored it.
-                    
-                    # Better approach: Re-use the Normalizer's logic to find the key
-                    canonical = self.normalizer._find_best_match(llm_name)
-                    if canonical:
-                        ai_units_map[canonical] = unit
-
-        self.analysed, summary = self.analyzer.analyze(raw_data, extracted_units=ai_units_map)
+        self.analysed, summary = self.analyzer.analyze(raw_data, extracted_units=ui_units)
         self.summary_box.setPlainText(summary)
 
         for test_name, info in self.analysed.items():
@@ -380,10 +384,10 @@ class BloodAnalyzerApp(QMainWindow):
                 label.setText("Unit Mismatch")
                 label.setStyleSheet("background-color: orange; color: black; font-weight: bold; border-radius: 4px; padding: 2px;")
                 # Optional: Tooltip showing the difference
-                label.setToolTip(f"Database: {info['units']} vs Extracted: {info['ai_unit']}")
+                label.setToolTip(f"Database: {info['db_units']} vs Extracted: {info['ai_units']}")
 
             # Set text and background color
-            if status == "green":
+            elif status == "green":
                 label.setText("Normal")
                 label.setStyleSheet("background-color: lightgreen; color: black; border-radius: 4px; padding: 2px;")
             elif status == "yellow":
@@ -398,6 +402,7 @@ class BloodAnalyzerApp(QMainWindow):
             else:
                 label.setText("Check Manually")
                 label.setStyleSheet("background-color: orange; color: black; border-radius: 4px; padding: 2px;")
+                label.setToolTip("Could not parse value or range")
 
 
     def export_data(self):
