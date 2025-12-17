@@ -72,7 +72,7 @@ class Analyzer:
                         # e.g. "mg/dL" vs "mg/dl"
                         norm_db = db_unit.lower().replace(" ", "")
                         norm_ai = ai_unit.lower().replace(" ", "")
-                        print(norm_db, norm_ai)
+                        # print(norm_db, norm_ai)
                         
                         # Use simple substring check or exact match
                         if norm_db != norm_ai:
@@ -99,8 +99,8 @@ class Analyzer:
                     "value": user_val,
                     "min": min_val,
                     "max": max_val,
-                    "units": db_unit,     # The standard unit from DB
-                    "ai_unit": ai_unit,   # The unit found in PDF (for UI/Export)
+                    "db_units": db_unit,     # The standard unit from DB
+                    "ai_units": ai_unit,   # The unit found in PDF (for UI/Export)
                     "status": status,
                     "healthy_value": healthy_val,
                     "unit_mismatch": unit_mismatch if 'unit_mismatch' in locals() else False
@@ -229,6 +229,20 @@ class Analyzer:
         if healthy_str.replace('.', '', 1).isdigit():
             healthy_num = float(healthy_str)
 
+            if min_num is None and max_num is None:
+                if healthy_num == 0: return "check manually" # Prevent div/0 errors
+
+                # Calculate percentage difference
+                diff = abs(user_val_num - healthy_num)
+                pct_diff = diff / healthy_num
+
+                if pct_diff <= 0.10:       # Within 10%
+                    return "green"
+                elif pct_diff <= 1.00:     # Within 100% (e.g. up to 2x value)
+                    return "yellow"
+                else:                      # > 100% deviation
+                    return "red"
+
         # --- Case 2: healthy value is a range, e.g. "4-6" or "4–6" ---
         elif re.match(r"^\s*\d+(\.\d+)?\s*[-–]\s*\d+(\.\d+)?\s*$", healthy_str):
             parts = re.split(r"[-–]", healthy_str)
@@ -240,9 +254,9 @@ class Analyzer:
             upper_warn = high - (range_diff * 0.1)
             healthy_num = (low + high) / 2
 
-            if user_val_num <= min_num or user_val_num >= max_num:
+            if user_val_num < min_num or user_val_num > max_num:
                 return "red"
-            elif user_val_num <= lower_warn or user_val_num >= upper_warn:
+            elif user_val_num < lower_warn or user_val_num > upper_warn:
                 return "yellow"
             else:
                 return "green"
