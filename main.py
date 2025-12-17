@@ -1,6 +1,7 @@
 import sys
 import json
 import os
+import pprint
 
 from dotenv import load_dotenv
 
@@ -17,6 +18,7 @@ from modules.parser import PDFParser
 from modules.parser import DoclingWorker
 from modules.parser import LLMWorker
 from modules.exporter import PDFExporter
+from modules.normalizer import Normalizer
 
 from google import genai
 from google.genai import types
@@ -120,6 +122,7 @@ class BloodAnalyzerApp(QMainWindow):
             grid.addWidget(header_label, 0, col, Qt.AlignTop | Qt.AlignLeft)
 
         self.load_data(grid, self.json_file)
+        self.normalizer = Normalizer(list(self.param_inputs.keys()))
 
         main_layout.addWidget(scroll_area)
         main_layout.addWidget(self.separator())
@@ -285,6 +288,8 @@ class BloodAnalyzerApp(QMainWindow):
         # Success
         self.populate_ui_from_data(parsed_data)
         QMessageBox.information(self, "Success", "Data extracted and fields populated!")
+        self.extract_btn.setStyleSheet("")
+        pprint.pp(parsed_data)
 
     def cancel_llm_worker(self):
         """Handle user clicking 'Cancel' on the loading popup"""
@@ -293,27 +298,26 @@ class BloodAnalyzerApp(QMainWindow):
             self.llm_worker.wait()
 
     def populate_ui_from_data(self, parsed_data):
-        """Fills the inputs with the data returned from parser"""
+        """
+        Uses the Normalizer module to clean data before populating UI by
+        filling the inputs with the data returned from parser
+        """
         if not parsed_data:
             return
-            
-        tests = parsed_data.get("tests", {})
         
-        # Merge into persistent auto params
-        for test_name, test_data in tests.items():
-            value = test_data.get("value")
-            if value is not None:
-                self.param_autos[test_name] = str(value)
-                
-        # Update UI fields
+        # 1. Delegate the complex matching logic to the Normalizer
+        clean_data = self.normalizer.normalize(parsed_data)
+            
         count = 0
-        for test_name, field in self.param_inputs.items():
-            # Loose matching could go here (e.g. lower case comparison)
-            if test_name in self.param_autos:
-                field.setText(self.param_autos[test_name])
+        # 2. Populate UI (No logic needed here, just simple assignment)
+        for test_name, value in clean_data.items():
+            if test_name in self.param_inputs:
+                self.param_inputs[test_name].setText(value)
+                # Update the persistent auto-fill dict too
+                self.param_autos[test_name] = value 
                 count += 1
         
-        print(f"Populated {count} fields.")
+        QMessageBox.information(self, "Success", f"Populated {count} fields.")
 
     def clear_all(self):
         """Clears inputs, parser memory, and resets UI"""
@@ -341,14 +345,42 @@ class BloodAnalyzerApp(QMainWindow):
         """Submits all the value in the line fields to the analyzer and runs the analyzer"""
         raw_data = {param: field.text().strip() for param, field in self.param_inputs.items()}
 
-        self.analysed, summary = self.analyzer.analyze(raw_data)
+        # 2. Prepare AI Extracted Units for validation
+        # We need to map the AI's units to the canonical test names using the Normalizer
+        ai_units_map = {}
+        if self.parser.auto_params:
+            raw_ai_tests = self.parser.auto_params.get("tests", {})
+            
+            # We iterate through the raw AI data
+            for llm_name, test_data in raw_ai_tests.items():
+                unit = test_data.get("unit")
+                if unit:
+                    # Find which Canonical Name this corresponds to
+                    # (We use the internal helper from normalizer if available, or just re-normalize)
+                    # Since we don't expose _find_best_match publicly, we can rely on 
+                    # self.param_autos logic if we tracked it, OR we just trust the normalize() output if we stored it.
+                    
+                    # Better approach: Re-use the Normalizer's logic to find the key
+                    canonical = self.normalizer._find_best_match(llm_name)
+                    if canonical:
+                        ai_units_map[canonical] = unit
+
+        self.analysed, summary = self.analyzer.analyze(raw_data, extracted_units=ai_units_map)
         self.summary_box.setPlainText(summary)
 
         for test_name, info in self.analysed.items():
             status = info["status"]
+            # check for unit mismatch
+            is_mismatch = info.get("unit_mismatch", False)
             label = self.status_labels.get(test_name)
             if not label:
                 continue
+
+            if is_mismatch:
+                label.setText("Unit Mismatch")
+                label.setStyleSheet("background-color: orange; color: black; font-weight: bold; border-radius: 4px; padding: 2px;")
+                # Optional: Tooltip showing the difference
+                label.setToolTip(f"Database: {info['units']} vs Extracted: {info['ai_unit']}")
 
             # Set text and background color
             if status == "green":
@@ -363,12 +395,7 @@ class BloodAnalyzerApp(QMainWindow):
             elif status == "empty":
                 label.setText("Not Tested")
                 label.setStyleSheet("background-color: lightgray; color: black; border-radius: 4px; padding: 2px;")
-            elif status == "uncheckable":
-                label.setText("Check Manually")
-                label.setStyleSheet("background-color: orange; color: black; border-radius: 4px; padding: 2px;")
             else:
-                # label.setText("Unknown")
-                # label.setStyleSheet("background-color: gray; color: white; border-radius: 4px; padding: 2px;")
                 label.setText("Check Manually")
                 label.setStyleSheet("background-color: orange; color: black; border-radius: 4px; padding: 2px;")
 
@@ -378,58 +405,41 @@ class BloodAnalyzerApp(QMainWindow):
             QMessageBox.warning(self, "Warning", "Please analyze data (Submit) before exporting.")
             return
         
-        save_path, _ = QFileDialog.getSaveFileName(self, "Save Report", "BloodWork_Report.pdf", "PDF Files (*.pdf)")
-        if save_path:
-            self.exporter.export(self.analysed, self.summary_box.toPlainText(), save_path)
-            QMessageBox.information(self, "Success", f"Report saved to {save_path}")
+        # 2. Open File Explorer to choose save location
+        # This handles the "File Explorer" requirement
+        default_name = "BloodWork_Report.pdf"
+        save_path, _ = QFileDialog.getSaveFileName(
+            self, 
+            "Save PDF Report", 
+            default_name, 
+            "PDF Files (*.pdf)"
+        )
 
-    # def open_n_parse_data(self):
-    #     """
-    #     Opens a PDF file, extracts blood test data using Docling + LLM,
-    #     and auto-fills matching test fields in the UI.
-    #     """
-    #     print("Opening file")
-    #     # 1. Ask user for a PDF file
-    #     filepath, _ = QFileDialog.getOpenFileName(
-    #         self,
-    #         "Select Blood Test PDF",
-    #         "",
-    #         "PDF Files (*.pdf)"
-    #     )
+        if not save_path:
+            return # User cancelled
 
-    #     if not filepath:
-    #         return  # User cancelled
-
-    #     try:
-    #         # 2. Parse PDF using Docling + LLM
-    #         parsed_data = self.parser.parse(filepath)
-
-    #     except Exception as e:
-    #         # TODO: replace with QMessageBox for user-facing error
-    #         print(f"Error parsing PDF: {e}")
-    #         return
-
-    #     if not parsed_data:
-    #         return
-        
-    #     print("Successfully extracted")
-    #     tests = parsed_data.get("tests",{})
-
-    #     # 4. Merge into persistent dictionary (never reset unless Clear All)
-    #     for test_name, test_data in tests.items():
-    #         print(test_name, test_data)
-    #         value = test_data.get("value")
-    #         if value is not None:
-    #             self.param_autos[test_name] = str(value)
-
-    #     # 5. Update UI fields where test names match
-    #     for test_name, field in self.param_inputs.items():
-    #         if test_name in self.param_autos:
-    #             field.setText(self.param_autos[test_name])
-
-    #     # Optional: force analyser to re-check statuses on update
-    #     # self.submit_data()
-
+        # 3. Call Exporter
+        try:
+            # We pass:
+            # 1. The status/results (self.analysed)
+            # 2. The raw AI data for metadata like Units/Ref Ranges (self.parser.auto_params)
+            # 3. The notes (self.summary_box)
+            # 4. The path
+            self.exporter.export(
+                self.analysed, 
+                self.parser.auto_params, 
+                self.summary_box.toPlainText(), 
+                save_path
+            )
+            
+            QMessageBox.information(self, "Success", f"Report saved successfully to:\n{save_path}")
+            
+            # Optional: Open the file automatically after saving
+            # import os
+            # os.startfile(save_path) # Windows only
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Export Failed", f"An error occurred:\n{str(e)}")
 
 
 if __name__ == "__main__":
