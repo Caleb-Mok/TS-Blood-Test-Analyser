@@ -100,7 +100,7 @@
           { "name": "MCV", "units":"fL", "healthy_value": 91, "min": 82, "max": 100 },
           { "name": "MCH", "units":"pg", "healthy_value": 30.5, "min": 27, "max": 34 },
           { "name": "MCHC", "units":"g/L", "healthy_value": 335, "min": 316, "max": 354 },
-          { "name": "ESR", "units":"mm/h", "healthy_value": "Female <20", "min": "", "max": "21" }
+          { "name": "ESR", "units":"mm/h", "healthy_value": "<20", "min": "", "max": "21" }
         ]
       },
       {
