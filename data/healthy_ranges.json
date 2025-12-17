@@ -78,8 +78,8 @@
         "tests": [
           { "name": "AFP (Alpha-Fetoprotein)", "units":"ug/L", "healthy_value": "<7", "min": "", "max": "11" },
           { "name": "CEA", "units":"ug/L", "healthy_value": "<4.7", "min": "", "max": "5.1" },
-          { "name": "CA 15-3", "units":"U/ml", "healthy_value": "<31.3", "min": "", "max": "39.1" },
-          { "name": "CA 19-9", "units":"U/ml", "healthy_value": "<39", "min": "", "max": "32" },
+          { "name": "CA 15.3", "units":"U/ml", "healthy_value": "<31.3", "min": "", "max": "39.1" },
+          { "name": "CA 19.9", "units":"U/ml", "healthy_value": "<39", "min": "", "max": "32" },
           { "name": "CA 125", "units":"U/ml", "healthy_value": "<35", "min": "", "max": "36" },
           { "name": "Total PSA", "units":"", "healthy_value": "<4.0", "min": "", "max": "" }
         ]
@@ -88,14 +88,14 @@
         "name": "HAEMATOLOGY",
         "tests": [
           { "name": "Haemoglobin", "units":"g/L", "healthy_value": 132.5, "min": 115, "max": 150 },
-          { "name": "White Blood Cell Count", "units":"x 10^9/L", "healthy_value": 6, "min": 3.5, "max": 9.5 },
+          { "name": "White Blood Cell Count", "units":"x 10 9/L", "healthy_value": 6, "min": 3.5, "max": 9.5 },
           { "name": "Neutrophils", "units":"%", "healthy_value": 60, "min": "", "max": "" },
           { "name": "Lymphocytes", "units":"%", "healthy_value": 30, "min": "", "max": "" },
           { "name": "Monocytes", "units":"%", "healthy_value": 4, "min": "", "max": "" },
           { "name": "Eosinophils", "units":"%", "healthy_value": 2, "min": "", "max": "" },
           { "name": "Basophils", "units":"%", "healthy_value": 1, "min": "", "max": "" },
-          { "name": "Red Blood Cell Count", "units":"x 10^12/L", "healthy_value": 4.45, "min": 3.8, "max": 5.1 },
-          { "name": "Platelets", "units":"x 10^9/L", "healthy_value": 250, "min": 150, "max": 410 },
+          { "name": "Red Blood Cell Count", "units":"x 10 12/L", "healthy_value": 4.45, "min": 3.8, "max": 5.1 },
+          { "name": "Platelets", "units":"x 10 9/L", "healthy_value": 250, "min": 150, "max": 410 },
           { "name": "Haematocrit", "units":"%", "healthy_value": 40, "min": "", "max": "" },
           { "name": "MCV", "units":"fL", "healthy_value": 91, "min": 82, "max": 100 },
           { "name": "MCH", "units":"pg", "healthy_value": 30.5, "min": 27, "max": 34 },
