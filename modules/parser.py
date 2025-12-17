@@ -66,8 +66,8 @@ class Metadata(BaseModel):
 class TestResult(BaseModel):
     test_name: str = Field(description="Standardized English name of the blood test (e.g., 'Hemoglobin', 'Platelets')")
     value: float = Field(description="The numeric result value")
-    unit: str = Field(description="The unit of measurement (e.g., 'g/dL', '%')")
-    ref_range: str = Field(description="Reference range as a string (e.g., '13.5-17.5', '<50')")
+    unit: Optional[str] = Field(description="The unit of measurement (e.g., 'g/dL', '%')")
+    ref_range: Optional[str] = Field(description="Reference range as a string (e.g., '13.5-17.5', '<50')")
 
 class BloodWorkReport(BaseModel):
     metadata: Metadata
@@ -104,74 +104,10 @@ class PDFParser:
             return self.fulltext
         except Exception as e:
             raise RuntimeError(f"Docling conversion failed: {e}")
-    
-    # def parse(self, filepath):
-    #     # Initialize docling converter
-        
-    #     # Extract text
-    #     if self.fulltext == "":  
-    #         converter = DocumentConverter()
-    #         doc = converter.convert(filepath)
-    #         self.fulltext = doc.document.export_to_text()
-
-    #     # Extract structured data using LLM
-    #     self.auto_params = self.llm_extract_json(self.fulltext)
-
-    #     return self.auto_params
 
     def clear_data(self):
         self.auto_params = {}
         self.fulltext = ""
-
-    # def llm_extract_json(self, fulltext):
-    #     SYSTEM_PROMPT = """
-    #     You are a medical data assistant. Extract blood test results from the text.
-    #     - Normalize test names to standard English.
-    #     - Ignore notes, comments, and non-test data.
-    #     - If a value is missing, skip that test.
-    #     """
-
-    #     USER_PROMPT = f"Extract structured blood test data from this text:\n\n{fulltext}"
-
-    #     try:
-    #         # Follows the "google-genai" SDK pattern
-    #         response = self.llm_client.models.generate_content(
-    #             model="gemini-2.5-flash", # Or 'gemini-2.0-flash-exp' if you have access
-    #             contents=USER_PROMPT,
-    #             config={
-    #                 "response_mime_type": "application/json",
-    #                 "response_schema": BloodWorkReport, # Pass the Pydantic class directly
-    #                 "system_instruction": SYSTEM_PROMPT,
-    #                 "temperature": 0,
-    #             },
-    #         )
-
-    #         # Validate and Parse using Pydantic
-    #         # The SDK automatically handles the JSON loading into the model if using strict schema
-    #         # But we can also parse response.text manually to be safe
-    #         report = BloodWorkReport.model_validate_json(response.text)
-
-    #         # --- CRITICAL: Convert back to your UI's expected Dict format ---
-    #         # Your UI expects: {"tests": {"Hemoglobin": {"value": 14, ...}}}
-    #         # But Pydantic gave us: {"tests": [{"test_name": "Hemoglobin", "value": 14...}]}
-            
-    #         transformed_data = {
-    #             "metadata": report.metadata.model_dump(),
-    #             "tests": {}
-    #         }
-
-    #         for t in report.tests:
-    #             transformed_data["tests"][t.test_name] = {
-    #                 "value": t.value,
-    #                 "unit": t.unit,
-    #                 "ref_range": t.ref_range
-    #             }
-
-    #         return transformed_data
-
-        # except Exception as e:
-        #     print(f"Extraction Error: {e}")
-        #     raise ValueError(f"LLM extraction failed: {str(e)}")
 
     def extract_data_with_llm(self):
         """
@@ -187,6 +123,7 @@ class PDFParser:
         SYSTEM_PROMPT = """
         You are a medical data assistant. Extract blood test results from the text.
         - Normalize test names to standard English.
+        - You may use chinese test name to help with identifying what test it is
         - Ignore notes, comments, and non-test data.
         - If a value is missing, skip that test.
         """
@@ -195,7 +132,7 @@ class PDFParser:
 
         try:
             response = self.llm_client.models.generate_content(
-                model="gemini-2.5-flash", 
+                model="gemini-2.5-flash-lite", 
                 contents=USER_PROMPT,
                 config={
                     "response_mime_type": "application/json",

@@ -33,58 +33,79 @@ class Analyzer:
     #     return db
     
 
-    def analyze(self, raw_data):
-        # data is a dict of {param_name: value(raw string from QLineEdit)}
-        # return dict of {param_name: status}, and string (summary)
+    def analyze(self, raw_data, extracted_units=None):
+        """
+        :param raw_data: dict {test_name: value} from UI inputs
+        :param extracted_units: dict {test_name: unit_string} from AI extraction (optional)
+        :return: status_dict, summary_text
+        """
+        if extracted_units is None:
+            extracted_units = {}
         
-        status_dict = {}
+        status_dict = {}    
         abnormal_tests, borderline_tests, normal_tests, missing_tests, manual_tests = [], [], [], [], []
 
         for category in self.healthy_data["categories"]:
             for test in category["tests"]:
                 test_name = test["name"]
-                units = test.get("units", "")
+                db_unit = test.get("units", "").strip()
                 healthy_val = test.get("healthy_value", "")
                 min_val = test.get("min", "")
                 max_val = test.get("max", "")
+
+                # get user input
                 user_val = raw_data.get(test_name, "").strip()
+
+                ai_unit = extracted_units.get(test_name, "").strip()
+
+                status = "unknown"
 
                 if not user_val:  # user didn’t test this
                     status = "empty"
                     missing_tests.append(test_name)
                 else:
-                    # Try to convert numerical limits
-                    try:
-                        user_val_num = float(user_val)
-                        # min_num, max_num, healthy_num = self.expression_converter(min_val, max_val, healthy_val)
-                        # if min_num is None and max_num is None:
-                        #     status = "uncheckable"
-                        # else:
-                        #     status = self.get_status_color(
-                        #         user_val_num,
-                        #         healthy_num if healthy_num else (min_num + max_num) / 2 if min_num and max_num else user_val_num,
-                        #         min_num if min_num is not None else user_val_num,
-                        #         max_num if max_num is not None else user_val_num,
-                        #     )
-                        status = self.get_status_color(
-                            user_val_num, healthy_val, min_val, max_val
-                        )
-
-
-                    except Exception as e:
-                        print(e)
-                        # Non-numeric user input
+                    # --- CRITICAL: Unit Mismatch Check ---
+                    # Only check if both units exist and are not empty
+                    unit_mismatch = False
+                    if db_unit and ai_unit:
+                        # Normalize for comparison (ignore case, spaces, slight variations)
+                        # e.g. "mg/dL" vs "mg/dl"
+                        norm_db = db_unit.lower().replace(" ", "")
+                        norm_ai = ai_unit.lower().replace(" ", "")
+                        print(norm_db, norm_ai)
+                        
+                        # Use simple substring check or exact match
+                        if norm_db != norm_ai:
+                             # Allow common variations manually if needed (e.g. uL vs L)
+                             # For now, strict check:
+                             unit_mismatch = True
+                    
+                    if unit_mismatch:
                         status = "uncheckable"
+                        # Append specific warning for summary
+                        # We handle this logic below to force "check manually"
+                    else:
+                        # Proceed with normal numeric analysis
+                        try:
+                            user_val_num = float(user_val)
+                            status = self.get_status_color(
+                                user_val_num, healthy_val, min_val, max_val
+                            )
+                        except Exception:
+                            status = "uncheckable"
 
                 # Store status and details
                 status_dict[test_name] = {
                     "value": user_val,
                     "min": min_val,
                     "max": max_val,
-                    "units": units,
+                    "units": db_unit,     # The standard unit from DB
+                    "ai_unit": ai_unit,   # The unit found in PDF (for UI/Export)
                     "status": status,
-                    "healthy_value": healthy_val
+                    "healthy_value": healthy_val,
+                    "unit_mismatch": unit_mismatch if 'unit_mismatch' in locals() else False
                 }
+
 
                 # Sort into categories for summary
                 if status == "red":
@@ -119,16 +140,6 @@ class Analyzer:
 
         return status_dict, summary_text
     
-    # def generate_sumamry(self, tested, abnormal, missing):
-    #     """Generate a short summary sentence."""
-    #     total = tested + missing
-    #     if tested == 0:
-    #         return "No test data provided."
-    #     if abnormal == 0:
-    #         return f"All {tested} tested parameters are within healthy ranges. {missing} not tested."
-    #     else:
-    #         return f"{abnormal} out of {tested} tested parameters are outside the healthy range. {missing} were not tested."
-
 
     def expression_converter(self, min_val, max_val, healthy_val):
         """Convert alternative expression formats to numeric, e.g. '<35' or '70-110'.
@@ -200,18 +211,6 @@ class Analyzer:
         - If healthy value is a range (x-y) or inequalities, handle differently with specific warn bands.
         - No numeric reference or invalid format → "check manually"
         """
-
-        # if min_val is None or max_val is None:
-        #     return "uncheckable"
-
-        # lower_warn = healthy_val * (1 - tolerance)
-        # upper_warn = healthy_val * (1 + tolerance)
-        # if user_val < min_val or user_val > max_val:
-        #     return "red"
-        # elif user_val < lower_warn or user_val > upper_warn:
-        #     return "yellow"
-        # else:
-        #     return "green"
 
         # Parse numeric or symbolic ranges
         healthy_str = str(healthy_str).strip()
