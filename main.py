@@ -1,19 +1,39 @@
 import sys
-import numpy
 import json
+import os
+
+from dotenv import load_dotenv
 
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QLineEdit, QSizePolicy, QFrame, QScrollArea, QTextEdit)
-from PySide6.QtCore import Qt
+    QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, 
+    QGridLayout, QLabel, QLineEdit, QFrame, QScrollArea, QTextEdit, 
+    QFileDialog, QMessageBox, QProgressDialog,
+)
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QFont
 
 from modules.analyzer import Analyzer
 from modules.parser import PDFParser
+from modules.parser import DoclingWorker
+from modules.parser import LLMWorker
 from modules.exporter import PDFExporter
 
-from PySide6.QtWidgets import QFileDialog
-from modules.parser import PDFSelectionDialog
+from google import genai
+from google.genai import types
 
+
+ # loads the .env file
+load_dotenv()
+
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    print("Error: GEMINI_API_KEY not found in .env.")
+    sys.exit(1)
+
+llm_client = genai.Client(
+        api_key=api_key,
+        http_options=types.HttpOptions(api_version="v1beta")
+    )
 
 class BloodAnalyzerApp(QMainWindow):
     
@@ -21,16 +41,23 @@ class BloodAnalyzerApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("Blood Test Analyser")
         self.resize(1000, 800)
+
+        # Core Modules
         self.analyzer = Analyzer()
-        self.parser = PDFParser()
+        self.parser = PDFParser(llm_client=llm_client)
         self.exporter = PDFExporter()
         self.json_file = json_file
 
+        # State Variables
         self.param_inputs = {}
         self.param_autos = {}
         self.status_labels = {}
         self.analysed = {}
+        self.current_pdf_path = None
+
+        # UI Elements
         self.summary_box = QTextEdit()
+        self.extract_btn = None
         self.setup_ui()
         
     def setup_ui (self):
@@ -40,7 +67,9 @@ class BloodAnalyzerApp(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
 
         # Menu Buttons
-        open_button = QPushButton("Open")
+        open_button = QPushButton("Open File")
+        self.extract_btn = QPushButton("Extract Data")
+        self.extract_btn.setEnabled(False) # Disabled until PDF is parsed
         clear_button = QPushButton("Clear All")
         submit_button = QPushButton("Submit")
         export_button = QPushButton("Export")
@@ -48,9 +77,9 @@ class BloodAnalyzerApp(QMainWindow):
         menu_layout = QHBoxLayout() 
         button_font = QFont()
         button_font.setBold(True)
-        button_font.setPointSize(11)
+        button_font.setPointSize(10)
 
-        for btn in [open_button, clear_button, submit_button, export_button]:
+        for btn in [open_button, self.extract_btn ,clear_button, submit_button, export_button]:
             btn.setFixedHeight(40)
             btn.setFont(button_font)
             menu_layout.addWidget(btn)
@@ -102,10 +131,11 @@ class BloodAnalyzerApp(QMainWindow):
         main_layout.addStretch() # Move everything to top (top justify)
 
         # connect all the signals
+        open_button.clicked.connect(self.on_open_pdf_clicked)
+        self.extract_btn.clicked.connect(self.on_extract_clicked)
         clear_button.clicked.connect(self.clear_all)
         submit_button.clicked.connect(self.submit_data)
         export_button.clicked.connect(self.export_data)
-        open_button.clicked.connect(self.open_n_parse_data)
 
     def separator(self):
         line = QFrame()
@@ -179,18 +209,133 @@ class BloodAnalyzerApp(QMainWindow):
                 grid.addWidget(healthy_label, row, 3)
                 grid.addWidget(status_label, row, 4)
                 row += 1
+    
+    # --- ACTION HANDLERS ---
+
+    def on_open_pdf_clicked(self):
+        """Step 1: Open File & Run Docling (Threaded)"""
+        filepath, _ = QFileDialog.getOpenFileName(
+            self, "Select Blood Test PDF", "", "PDF Files (*.pdf)"
+        )
+        if not filepath:
+            return
+
+        self.current_pdf_path = filepath
+        
+        # Create Progress Dialog
+        self.progress = QProgressDialog("Reading PDF structure (Docling)...", "Cancel", 0, 0, self)
+        self.progress.setWindowTitle("Reading PDF")
+        self.progress.setWindowModality(Qt.WindowModal)
+        self.progress.setCancelButton(None) # Disable cancel for simplicity
+        self.progress.show()
+
+        # Start Thread
+        self.worker = DoclingWorker(self.parser, filepath)
+        self.worker.finished_signal.connect(self.on_docling_finished)
+        self.worker.start()
+
+    def on_docling_finished(self, result_text, success):
+        """Called when Docling thread finishes"""
+        self.progress.close()
+        
+        if success:
+            QMessageBox.information(self, "Success", "PDF Read Successfully.\nNow press 'Extract Data' to process with AI.")
+            self.extract_btn.setEnabled(True)
+            self.extract_btn.setStyleSheet("background-color: #d1e7dd; color: #0f5132;") # Greenish hint
+        else:
+            QMessageBox.critical(self, "Error Reading PDF", result_text)
+            self.extract_btn.setEnabled(False)
+
+    def on_extract_clicked(self):
+        """Step 2: Run LLM Extraction (Can be retried)"""
+        if not self.parser.fulltext:
+            QMessageBox.warning(self, "Warning", "No PDF text loaded.")
+            return
+
+        # Show a simple spinner for LLM call too (or just block briefly since it's faster)
+        # We'll use a progress dialog again for good UX
+        self.llm_progress = QProgressDialog("Contacting AI for Extraction...", None, 0, 0, self)
+        self.llm_progress.setWindowTitle("AI Extraction")
+        self.llm_progress.setWindowModality(Qt.WindowModal)
+        self.llm_progress.setMinimumDuration(0) # Show immediately
+        self.llm_progress.setAutoClose(False)   # We will close it manually
+        self.llm_progress.setAutoReset(False)
+        
+        # Connect the Cancel button to stop the thread
+        self.llm_progress.canceled.connect(self.cancel_llm_worker)
+        
+        # 2. Setup and Start Thread
+        self.llm_worker = LLMWorker(self.parser)
+        self.llm_worker.finished_signal.connect(self.on_llm_finished)
+        self.llm_worker.start()
+        
+        # Show the dialog
+        self.llm_progress.exec()
+
+    def on_llm_finished(self, parsed_data, error_msg):
+        """Called when LLM thread finishes"""
+        self.llm_progress.close()
+        
+        if error_msg:
+            # If the user cancelled, we might get an error or just empty
+            if "thread" not in error_msg.lower(): 
+                QMessageBox.critical(self, "Extraction Failed", f"AI Error:\n{error_msg}\n\nPlease try pressing Extract again.")
+            return
+
+        # Success
+        self.populate_ui_from_data(parsed_data)
+        QMessageBox.information(self, "Success", "Data extracted and fields populated!")
+
+    def cancel_llm_worker(self):
+        """Handle user clicking 'Cancel' on the loading popup"""
+        if hasattr(self, 'llm_worker') and self.llm_worker.isRunning():
+            self.llm_worker.terminate()
+            self.llm_worker.wait()
+
+    def populate_ui_from_data(self, parsed_data):
+        """Fills the inputs with the data returned from parser"""
+        if not parsed_data:
+            return
+            
+        tests = parsed_data.get("tests", {})
+        
+        # Merge into persistent auto params
+        for test_name, test_data in tests.items():
+            value = test_data.get("value")
+            if value is not None:
+                self.param_autos[test_name] = str(value)
+                
+        # Update UI fields
+        count = 0
+        for test_name, field in self.param_inputs.items():
+            # Loose matching could go here (e.g. lower case comparison)
+            if test_name in self.param_autos:
+                field.setText(self.param_autos[test_name])
+                count += 1
+        
+        print(f"Populated {count} fields.")
 
     def clear_all(self):
-        """Clears all QLineEdit fields and summary box."""
+        """Clears inputs, parser memory, and resets UI"""
+        # Clear UI
         for field in self.param_inputs.values():
             field.clear()
         self.summary_box.clear()
 
+        # Clear Status
         for label in self.status_labels.values():
             label.setText("-")
             label.setStyleSheet("background-color: lightgray; color: black; border-radius: 4px; padding: 2px;")
 
-        self.status_outputs = {}
+        # Clear Data
+        self.param_autos = {}
+        self.analysed = {}
+        self.parser.clear_data()
+        
+        # Reset Buttons
+        self.extract_btn.setEnabled(False)
+        self.extract_btn.setStyleSheet("")
+        self.current_pdf_path = None
 
     def submit_data(self):
         """Submits all the value in the line fields to the analyzer and runs the analyzer"""
@@ -229,66 +374,74 @@ class BloodAnalyzerApp(QMainWindow):
 
 
     def export_data(self):
-        """Starts the export process"""
-        print("Exporting data")
-        self.exporter.export(self.analysed, self.summary_box.toPlainText())
+        if not self.analysed:
+            QMessageBox.warning(self, "Warning", "Please analyze data (Submit) before exporting.")
+            return
+        
+        save_path, _ = QFileDialog.getSaveFileName(self, "Save Report", "BloodWork_Report.pdf", "PDF Files (*.pdf)")
+        if save_path:
+            self.exporter.export(self.analysed, self.summary_box.toPlainText(), save_path)
+            QMessageBox.information(self, "Success", f"Report saved to {save_path}")
 
-    def open_n_parse_data(self):
-        """Calls parser.py and start parsing the pdf/img from open file
-        might want to pop a window popup to choose which files
-        """
-        print("Opening file")
-        # filepath = "get filepath from popup"
+    # def open_n_parse_data(self):
+    #     """
+    #     Opens a PDF file, extracts blood test data using Docling + LLM,
+    #     and auto-fills matching test fields in the UI.
+    #     """
+    #     print("Opening file")
+    #     # 1. Ask user for a PDF file
+    #     filepath, _ = QFileDialog.getOpenFileName(
+    #         self,
+    #         "Select Blood Test PDF",
+    #         "",
+    #         "PDF Files (*.pdf)"
+    #     )
 
-        # self.param_autos = self.parser.parse(filepath)
+    #     if not filepath:
+    #         return  # User cancelled
 
-        # then do comparisons, if param_autos have the same key as params_inputs then update the params_inputs value with the param_autos value.
+    #     try:
+    #         # 2. Parse PDF using Docling + LLM
+    #         parsed_data = self.parser.parse(filepath)
 
-        """Opens a file dialog, launches PDF region selector modal,
-       extracts values, and updates the UI automatically.
-        """
+    #     except Exception as e:
+    #         # TODO: replace with QMessageBox for user-facing error
+    #         print(f"Error parsing PDF: {e}")
+    #         return
 
-        # 1. Ask user for a PDF file
-        filepath, _ = QFileDialog.getOpenFileName(
-            self,
-            "Select Blood Test PDF",
-            "",
-            "PDF Files (*.pdf)"
-        )
+    #     if not parsed_data:
+    #         return
+        
+    #     print("Successfully extracted")
+    #     tests = parsed_data.get("tests",{})
 
-        if not filepath:
-            return  # User cancelled
+    #     # 4. Merge into persistent dictionary (never reset unless Clear All)
+    #     for test_name, test_data in tests.items():
+    #         print(test_name, test_data)
+    #         value = test_data.get("value")
+    #         if value is not None:
+    #             self.param_autos[test_name] = str(value)
 
-        # 2. Launch modal window for region selection
-        dialog = PDFSelectionDialog(filepath, parent=self)
-        if dialog.exec() != dialog.accepted:
-            return  # User cancelled
+    #     # 5. Update UI fields where test names match
+    #     for test_name, field in self.param_inputs.items():
+    #         if test_name in self.param_autos:
+    #             field.setText(self.param_autos[test_name])
 
-        # 3. Retrieve parsed values from modal
-        results = dialog.get_results()
-        parsed_values = results.get("parsed_values", {})
-
-        # 4. Merge into persistent dictionary (never reset unless Clear All)
-        for key, val in parsed_values.items():
-            self.param_autos[key] = val
-
-        # 5. Update UI fields where test names match
-        for test_name, field in self.param_inputs.items():
-            if test_name in self.param_autos:
-                field.setText(self.param_autos[test_name])
-
-        # Optional: force analyser to re-check statuses on update
-        # self.submit_data()
-
-
-
+    #     # Optional: force analyser to re-check statuses on update
+    #     # self.submit_data()
 
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    
+    # Ensure data file exists or handle error
+    data_file = "data/healthy_ranges.json"
+    if not os.path.exists(data_file):
+        QMessageBox.critical(None, "Fatal Error", f"Configuration file not found: {data_file}")
+        sys.exit(1)
 
-    window = BloodAnalyzerApp("data/healthy_ranges.json")
+    window = BloodAnalyzerApp(data_file)
     window.show()
 
     app.exec()
