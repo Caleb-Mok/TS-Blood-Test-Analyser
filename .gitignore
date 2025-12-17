@@ -28,3 +28,13 @@ env/
 *.html
 *.pdf
 *.png
+
+# Virtual Environments
+build_env/
+venv/
+env/
+.venv/
+
+#PyInstaller Artifacts
+build/
+dist/
