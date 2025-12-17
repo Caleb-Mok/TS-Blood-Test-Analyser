@@ -13,10 +13,9 @@
         "tests": [
           { "name": "Total Cholesterol", "units":"mmol/L", "healthy_value": 4.4, "min": "", "max": "5.18" },
           { "name": "Triglycerides", "units":"mmol/L", "healthy_value": 1.13, "min": "", "max": "1.7" },
-          { "name": "HDL-Cholesterol (Male)", "units":"mmol/L", "healthy_value": "1.55", "min": "1.29", "max": "1.55" },
-          { "name": "HDL-Cholesterol (Female)", "units":"mmol/L", "healthy_value": "1.29", "min": "1.29", "max": "1.55" },
-          { "name": "LDL-Cholesterol", "units":"mmol/L", "healthy_value": 2.07, "min": "", "max": "3.37" },
-          { "name": "VLDL-Cholesterol", "units":"mmol/L", "healthy_value": "<0.39", "min": "", "max": "" },
+          { "name": "HDL Cholesterol", "units":"mmol/L", "healthy_value": ">1.20", "min": "1.0", "max": "2.0" },
+          { "name": "LDL Cholesterol", "units":"mmol/L", "healthy_value": 2.07, "min": "", "max": "3.37" },
+          { "name": "VLDL Cholesterol", "units":"mmol/L", "healthy_value": "<0.39", "min": "", "max": "" },
           { "name": "Total/HDL Ratio", "units":"", "healthy_value": "<4", "min": "", "max": "" }
         ]
       },
@@ -26,13 +25,13 @@
           { "name": "Total Protein", "units":"g/L", "healthy_value": 75, "min": 65, "max": 86 },
           { "name": "Albumin", "units":"g/L", "healthy_value": 43, "min": 40, "max": 55 },
           { "name": "Globulin", "units":"g/L", "healthy_value": 31, "min": 20, "max": 40 },
-          { "name": "Albu/Glob Ratio", "units":"", "healthy_value": 1.5, "min": 1.2, "max": 2.4 },
-          { "name": "TBil (Total Bilirubin)", "units":"umol/L", "healthy_value": 12.05, "min": 5.1, "max": 19 },
+          { "name": "Albumin/Globulin Ratio", "units":"", "healthy_value": 1.5, "min": 1.2, "max": 2.4 },
+          { "name": "Total Bilirubin", "units":"umol/L", "healthy_value": 12.05, "min": 5.1, "max": 19 },
           { "name": "Indirect Bilirubin", "units":"", "healthy_value": "", "min": "", "max": "" },
           { "name": "Direct Bilirubin", "units":"", "healthy_value": 3.5, "min": 0, "max": 7 },
-          { "name": "ALKP", "units":"U/L", "healthy_value": 101.25, "min": 35, "max": 100 },
-          { "name": "ALT", "units":"U/L", "healthy_value": 35.25, "min": 7, "max": 40 },
-          { "name": "AST", "units":"U/L", "healthy_value": 36, "min": 13, "max": 35 },
+          { "name": "Alkaline Phosphatase (ALKP)", "units":"U/L", "healthy_value": 101.25, "min": 35, "max": 100 },
+          { "name": "ALT (SGPT)", "units":"U/L", "healthy_value": 35.25, "min": 7, "max": 40 },
+          { "name": "AST (SGOT)", "units":"U/L", "healthy_value": 36, "min": 13, "max": 35 },
           { "name": "GGT", "units":"U/L", "healthy_value": 39, "min": 7, "max": 45 }
         ]
       },
@@ -41,12 +40,12 @@
         "tests": [
           { "name": "Sodium", "units":"mmol/L", "healthy_value": 142, "min": 137, "max": 147 },
           { "name": "Potassium", "units":"mmol/L", "healthy_value": 4.4, "min": 3.5, "max": 5.3 },
-          { "name": "Choride", "units":"mmol/L", "healthy_value": 105, "min": 99, "max": 110 },
+          { "name": "Chloride", "units":"mmol/L", "healthy_value": 105, "min": 99, "max": 110 },
           { "name": "Magnesium", "units":"", "healthy_value": 0.8, "min": 0.75, "max": 1.02 },
           { "name": "Urea", "units":"mmol/L", "healthy_value": 3.33, "min": 2.6, "max": 7.5 },
           { "name": "Creatinine", "units":"umol/L", "healthy_value": 62, "min": 41, "max": 73 },
-          { "name": "e-GFR", "units":"mL/min/1.73m2", "healthy_value": 100, "min": "", "max": "" },
-          { "name": "Microalbumin,Urine(Random)", "units":"", "healthy_value": "", "min": "", "max": "" },
+          { "name": "eGFR", "units":"mL/min/1.73m2", "healthy_value": 100, "min": "", "max": "" },
+          { "name": "Urine Microalbumin", "units":"", "healthy_value": "", "min": "", "max": "" },
           { "name": "Microalbumin/Creatinine Ratio", "units":"", "healthy_value": "<30", "min": "", "max": "" }
         ]
       },
@@ -60,7 +59,7 @@
         ]
       },
       {
-        "name": "Thyroid PROFILE",
+        "name": "THYROID PROFILE",
         "tests": [
           { "name": "Free T4", "units":"pmol/L", "healthy_value": 16.9, "min": 9, "max": 25 },
           { "name": "TSH", "units":"mIU/L", "healthy_value": 2.6, "min": 0.4, "max": 4.7 }
@@ -69,19 +68,19 @@
       {
         "name": "HEPATITIS VIRUS",
         "tests": [
-          { "name": "Hepatitis A Antibodies", "units":"", "healthy_value": "", "min": "", "max": "" },
-          { "name": "HBs Antigen", "units":"", "healthy_value": "", "min": "", "max": "" },
-          { "name": "HBs Antibody", "units":"", "healthy_value": "", "min": "", "max": "" }
+          { "name": "Hepatitis A Antibody", "units":"", "healthy_value": "", "min": "", "max": "" },
+          { "name": "HBsAg", "units":"", "healthy_value": "", "min": "", "max": "" },
+          { "name": "HBsAb", "units":"", "healthy_value": "", "min": "", "max": "" }
         ]
       },
       {
-        "name": "Tumour Markers PROFILE",
+        "name": "TUMOUR MARKERS",
         "tests": [
-          { "name": "Alpha-Feto protein (AFP)", "units":"ug/L", "healthy_value": "<7", "min": "", "max": "11" },
+          { "name": "AFP (Alpha-Fetoprotein)", "units":"ug/L", "healthy_value": "<7", "min": "", "max": "11" },
           { "name": "CEA", "units":"ug/L", "healthy_value": "<4.7", "min": "", "max": "5.1" },
-          { "name": "CA15.3", "units":"U/ml", "healthy_value": "<31.3", "min": "", "max": "39.1" },
-          { "name": "CA19.9", "units":"U/ml", "healthy_value": "<39", "min": "", "max": "32" },
-          { "name": "CA125", "units":"U/ml", "healthy_value": "<35", "min": "", "max": "36" },
+          { "name": "CA 15-3", "units":"U/ml", "healthy_value": "<31.3", "min": "", "max": "39.1" },
+          { "name": "CA 19-9", "units":"U/ml", "healthy_value": "<39", "min": "", "max": "32" },
+          { "name": "CA 125", "units":"U/ml", "healthy_value": "<35", "min": "", "max": "36" },
           { "name": "Total PSA", "units":"", "healthy_value": "<4.0", "min": "", "max": "" }
         ]
       },
@@ -89,13 +88,13 @@
         "name": "HAEMATOLOGY",
         "tests": [
           { "name": "Haemoglobin", "units":"g/L", "healthy_value": 132.5, "min": 115, "max": 150 },
-          { "name": "Total White cell count", "units":"x 10^9/L", "healthy_value": 6, "min": 3.5, "max": 9.5 },
-          { "name": "Neutrophil", "units":"%", "healthy_value": 60, "min": "", "max": "" },
-          { "name": "Lymphocyte", "units":"%", "healthy_value": 30, "min": "", "max": "" },
-          { "name": "Monocyte", "units":"%", "healthy_value": 4, "min": "", "max": "" },
-          { "name": "Eosinophil", "units":"%", "healthy_value": 2, "min": "", "max": "" },
-          { "name": "Basophil", "units":"%", "healthy_value": 1, "min": "", "max": "" },
-          { "name": "Total Red cell count", "units":"x 10^12/L", "healthy_value": 4.45, "min": 3.8, "max": 5.1 },
+          { "name": "White Blood Cell Count", "units":"x 10^9/L", "healthy_value": 6, "min": 3.5, "max": 9.5 },
+          { "name": "Neutrophils", "units":"%", "healthy_value": 60, "min": "", "max": "" },
+          { "name": "Lymphocytes", "units":"%", "healthy_value": 30, "min": "", "max": "" },
+          { "name": "Monocytes", "units":"%", "healthy_value": 4, "min": "", "max": "" },
+          { "name": "Eosinophils", "units":"%", "healthy_value": 2, "min": "", "max": "" },
+          { "name": "Basophils", "units":"%", "healthy_value": 1, "min": "", "max": "" },
+          { "name": "Red Blood Cell Count", "units":"x 10^12/L", "healthy_value": 4.45, "min": 3.8, "max": 5.1 },
           { "name": "Platelets", "units":"x 10^9/L", "healthy_value": 250, "min": 150, "max": 410 },
           { "name": "Haematocrit", "units":"%", "healthy_value": 40, "min": "", "max": "" },
           { "name": "MCV", "units":"fL", "healthy_value": 91, "min": 82, "max": 100 },
@@ -105,18 +104,20 @@
         ]
       },
       {
-        "name": "Urinalysis",
+        "name": "URINALYSIS",
         "tests": [
-          { "name": "Blood", "units":"", "healthy_value": "", "min": "", "max": "" },
+          { "name": "Urine Blood", "units":"", "healthy_value": "", "min": "", "max": "" },
           { "name": "Urobilinogen", "units":"", "healthy_value": "", "min": "", "max": "" },
           { "name": "Nitrite", "units":"", "healthy_value": "", "min": "", "max": "" },
-          { "name": "Bilirubin", "units":"", "healthy_value": "", "min": "", "max": "" },
-          { "name": "Protein", "units":"", "healthy_value": "", "min": "", "max": "" },
-          { "name": "PH", "units":"", "healthy_value": "7-7.5", "min": 5, "max": 9 },
+          { "name": "Urine Bilirubin", "units":"", "healthy_value": "", "min": "", "max": "" },
+          { "name": "Urine Protein", "units":"", "healthy_value": "", "min": "", "max": "" },
+          { "name": "pH", "units":"", "healthy_value": "7-7.5", "min": 5, "max": 9 },
           { "name": "Specific Gravity", "units":"", "healthy_value": "1.001-1.035", "min": 1.003, "max": 1.035 },
-          { "name": "Helicobacter Pylon", "units":"", "healthy_value": "<0.9", "min": "", "max": "" }
+          { "name": "Helicobacter Pylori", "units":"", "healthy_value": "<0.9", "min": "", "max": "" }
         ]
       }
     ]
   }
-  
+
+
+
