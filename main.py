@@ -19,6 +19,7 @@ from modules.parser import DoclingWorker
 from modules.parser import LLMWorker
 from modules.exporter import PDFExporter
 from modules.normalizer import Normalizer
+from modules.utils import resource_path
 
 from google import genai
 from google.genai import types
@@ -206,10 +207,6 @@ class BloodAnalyzerApp(QMainWindow):
                     
                 ref_text = format_reference(test)
                 healthy_label = QLabel(ref_text)
-                # healthy_label = QLabel(str(test["healthy_value"]))
-                # healthy_label = QLabel(str(test["min"])+"-"+str(test["max"]))
-                # healthy_label.setStyleSheet("color: gray;")
-
                 status_label = QLabel("-")  # placeholder for later green/yellow/red
                 status_label.setAlignment(Qt.AlignCenter)
                 status_label.setStyleSheet("background-color: gray; color: black; border-radius: 4px; padding: 2px;")
@@ -320,8 +317,7 @@ class BloodAnalyzerApp(QMainWindow):
         count = 0
         
         for llm_name, data in raw_tests.items():
-            # 1. Find the canonical name (Your JSON key) using Normalizer logic
-            # Note: Ensure _find_best_match exists in your Normalizer class
+            # 1. Find canonical_name
             canonical_name = self.normalizer._find_best_match(llm_name)
             
             if canonical_name:
@@ -440,8 +436,7 @@ class BloodAnalyzerApp(QMainWindow):
             QMessageBox.information(self, "Success", f"Report saved successfully to:\n{save_path}")
             
             # Optional: Open the file automatically after saving
-            # import os
-            # os.startfile(save_path) # Windows only
+            os.startfile(save_path) # Windows only
             
         except Exception as e:
             QMessageBox.critical(self, "Export Failed", f"An error occurred:\n{str(e)}")
@@ -451,7 +446,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     
     # Ensure data file exists or handle error
-    data_file = "data/healthy_ranges.json"
+    data_file = resource_path(os.path.join("data", "healthy_ranges.json"))
     if not os.path.exists(data_file):
         QMessageBox.critical(None, "Fatal Error", f"Configuration file not found: {data_file}")
         sys.exit(1)

@@ -1,37 +1,18 @@
 import os
 import json
 import re
+from modules.utils import resource_path
+
 class Analyzer:
 
-    def __init__(self, healthy_file="data/healthy_ranges.json"):
+    def __init__(self, healthy_file=None):
         """Load the healthy reference database from JSON."""
+
+        if healthy_file is None:
+            healthy_file = resource_path(os.path.join("data", "healthy_ranges.json"))
+
         with open(healthy_file, "r", encoding="utf-8") as f:
             self.healthy_data = json.load(f)
-        # self.healthy_db = self.load_healthy_data(healthy_file)
-
-
-    # def load_healthy_data(self, path):
-    #     """Load JSON data of healthy test ranges."""
-    #     if not os.path.exists(path):
-    #         raise FileNotFoundError(f"Healthy range file not found: {path}")
-    #     with open(path, "r", encoding="utf-8") as f:
-    #         data = json.load(f)
-
-    #     db = {}
-    #     for cat in data["categories"]:
-    #         for test in cat["tests"]:
-    #             name = test["name"].strip()
-    #             min_val = test.get("min","")
-    #             max_val = test.get("max","")
-    #             db[name] = {
-    #                 "category": cat["name"],
-    #                 "min": min_val,
-    #                 "max": max_val,
-    #                 "unit": test.get("units", ""),
-    #                 "healthy_value": test.get("healthy_value", ""),
-    #             }
-    #     return db
-    
 
     def analyze(self, raw_data, extracted_units=None):
         """
@@ -64,7 +45,6 @@ class Analyzer:
                     status = "empty"
                     missing_tests.append(test_name)
                 else:
-                    # --- CRITICAL: Unit Mismatch Check ---
                     # Only check if both units exist and are not empty
                     unit_mismatch = False
                     if db_unit and ai_unit:
@@ -74,16 +54,11 @@ class Analyzer:
                         norm_ai = ai_unit.lower().replace(" ", "")
                         # print(norm_db, norm_ai)
                         
-                        # Use simple substring check or exact match
                         if norm_db != norm_ai:
-                             # Allow common variations manually if needed (e.g. uL vs L)
-                             # For now, strict check:
                              unit_mismatch = True
                     
                     if unit_mismatch:
                         status = "uncheckable"
-                        # Append specific warning for summary
-                        # We handle this logic below to force "check manually"
                     else:
                         # Proceed with normal numeric analysis
                         try:
@@ -125,12 +100,8 @@ class Analyzer:
         if borderline_tests:
             summary_lines.append(f"⚠️ Slightly outside healthy range: {', '.join(borderline_tests)}.")
         if normal_tests:
-            # summary_lines.append(f"✅ Within healthy range: {', '.join(normal_tests[:5])}" +
-            #                      ("..." if len(normal_tests) > 5 else ""))
             summary_lines.append(f"✅ Within healthy range: {', '.join(normal_tests)}.")
         if missing_tests:
-            # summary_lines.append(f"ℹ️ Tests not performed: {', '.join(missing_tests[:5])}" +
-            #                      ("..." if len(missing_tests) > 5 else ""))
             summary_lines.append(f"ℹ️ Tests not performed: {', '.join(missing_tests)}.")
 
         if not summary_lines:

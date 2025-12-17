@@ -1,5 +1,7 @@
 import json
 import os
+
+from modules.utils import resource_path
 from rapidfuzz import process, fuzz
 
 class Normalizer:
@@ -15,10 +17,8 @@ class Normalizer:
         Loads the alias map from data/aliases.json.
         """
         try:
-            # 1. Determine path to data/aliases.json relative to this file
-            # Go up one level from 'modules' to root, then into 'data'
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            json_path = os.path.join(base_dir, 'data', 'aliases.json')
+            
+            json_path = resource_path(os.path.join('data', 'aliases.json'))
             
             with open(json_path, 'r') as f:
                 raw_map = json.load(f)

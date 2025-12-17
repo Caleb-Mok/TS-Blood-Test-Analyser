@@ -111,11 +111,6 @@ class PDFExporter:
             ('GRID', (0, 0), (-1, -1), 1, colors.black),         # Grid lines
             ('FONTSIZE', (0, 0), (-1, -1), 9),                   # Font size
         ])
-
-        # Dynamic Status Coloring
-        # We look at the 'analyzed_data' again or rely on the row index
-        # Since table_data[0] is header, row i matches index i in the loop (roughly)
-        # It's safer to iterate the table_data rows built above
         
         for i, row in enumerate(table_data):
             if i == 0: continue # Skip header
