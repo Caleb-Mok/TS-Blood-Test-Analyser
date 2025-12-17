@@ -21,7 +21,13 @@ class Normalizer:
             json_path = os.path.join(base_dir, 'data', 'aliases.json')
             
             with open(json_path, 'r') as f:
-                return json.load(f)
+                raw_map = json.load(f)
+                
+            clean_map = {}
+            for k, v in raw_map.items():
+                clean_map[k.lower().strip()] = v
+                
+            return clean_map
         except FileNotFoundError:
             print(f"Warning: Alias file not found at {json_path}. Normalizer will rely only on fuzzy matching.")
             return {}
@@ -29,6 +35,7 @@ class Normalizer:
             print(f"Error parsing aliases.json: {e}")
             return {}
 
+    # Not used anymore but left here just in case
     def normalize(self, extracted_data: dict) -> dict:
         """
         Takes raw data from LLM and returns a dictionary where keys 
@@ -54,6 +61,9 @@ class Normalizer:
         return normalized_data
 
     def _find_best_match(self, input_name: str):
+        """
+        Finds the best matching canonical key for a given input name.
+        """
         clean_name = input_name.lower().strip()
 
         # 1. Exact Match Check (Case-insensitive)
@@ -73,9 +83,15 @@ class Normalizer:
             scorer=fuzz.token_sort_ratio
         )
         
-        # Score cutoff: 85 is usually safe.
-        if match and match[1] >= 85:
-            print(f"Normalizer: Fuzzy matched '{input_name}' -> '{match[0]}' ({match[1]:.1f}%)")
-            return match[0]
+        # Strictness Check
+        if match:
+            candidate = match[0]
+            score = match[1]
+            
+            # High confidence threshold
+            if score >= 90:
+                print(f"Normalizer: Fuzzy matched '{input_name}' -> '{candidate}' ({score:.1f}%)")
+                return candidate
 
+        print(f"Normalizer: Could not map '{input_name}'")
         return None
