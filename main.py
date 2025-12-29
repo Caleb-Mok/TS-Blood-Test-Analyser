@@ -26,11 +26,22 @@ from google.genai import types
 
 
  # loads the .env file
-load_dotenv()
+env_path = resource_path(".env")
+
+# 2. Load it explicitly
+loaded = load_dotenv(env_path)
+
+# Debug print (visible because you have console=True now)
+if not loaded:
+    print(f"Warning: Could not load .env file from {env_path}")
+    print("Trying default load...")
+    load_dotenv() # Fallback to looking next to the .exe
+else:
+    print(f"Successfully loaded .env from {env_path}")
 
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
-    print("Error: GEMINI_API_KEY not found in .env.")
+    print(f"Error: GEMINI_API_KEY not found. Checked path: {env_path}")
     sys.exit(1)
 
 llm_client = genai.Client(
